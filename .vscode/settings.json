@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "optional": "cpp",
+        "system_error": "cpp",
+        "*.ipp": "cpp",
+        "format": "cpp",
+        "streambuf": "cpp",
+        "string_view": "cpp",
+        "random": "cpp"
+    }
+}
