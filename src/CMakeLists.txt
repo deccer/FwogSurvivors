@@ -21,5 +21,6 @@ target_link_libraries(FwogSurvivors
     PRIVATE stb
     PRIVATE EnTT
     PRIVATE chipmunk_static
+    PRIVATE imgui
 )
 target_include_directories(FwogSurvivors PRIVATE ${chipmunk_SOURCE_DIR}/include)
