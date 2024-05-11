@@ -83,7 +83,7 @@ auto LoadTextureFromFile(std::string_view filePath) -> std::optional<Fwog::Textu
     auto texture = Fwog::CreateTexture2D({
         static_cast<uint32_t>(width),
         static_cast<uint32_t>(height)},
-        Fwog::Format::R8G8B8A8_UNORM,
+        Fwog::Format::R8G8B8A8_SRGB,
         filePath);
     
     Fwog::TextureUpdateInfo tui = {};
@@ -181,12 +181,6 @@ auto CreateBuffers() -> void {
 
     if (g_frogTexture.has_value()) {
         g_frogTextureHandle = g_frogTexture.value().GetBindlessHandle(g_defaultSampler.value());
-        /*
-        auto frogTextureHandle = g_frogTexture.value().GetBindlessHandle(g_defaultSampler.value());
-        spriteTextureHandles.push_back(frogTextureHandle);
-        spriteTextureHandles.push_back(frogTextureHandle);
-        spriteTextureHandles.push_back(frogTextureHandle);
-        */
     }
 
     g_gpuSpriteTextureHandleBuffer = Fwog::Buffer(1024, Fwog::BufferStorageFlag::DYNAMIC_STORAGE, "SGpuSpriteTextureHandles");
@@ -195,7 +189,7 @@ auto CreateBuffers() -> void {
 auto InitializeRenderer(bool isDebug) -> bool {
 
     if (gladLoadGL() == GL_FALSE) {
-        spdlog::error("{} Unable to load OpenGL", "GameHost");
+        spdlog::error("{} Unable to load OpenGL", "Renderer");
         return false;
     }
 
@@ -213,7 +207,7 @@ auto InitializeRenderer(bool isDebug) -> bool {
 
     g_graphicsPipeline = CreateGraphicsPipeline();
     if (!g_graphicsPipeline) {
-        spdlog::error("{} Unable to compile graphics pipeline", "FwogSurvivors");
+        spdlog::error("{} Unable to compile graphics pipeline", "Renderer");
         return false;
     }
 
@@ -274,6 +268,7 @@ auto RenderWorld(glm::ivec2 framebufferSize) -> void {
             .clearDepthValue = { 1.0f }
         },
     [&] {
+
         Fwog::Cmd::BindGraphicsPipeline(g_graphicsPipeline.value());
         Fwog::Cmd::BindUniformBuffer("SGpuCameraInformationBuffer", g_gpuCameraInformationBuffer.value(), 0, sizeof(SGpuCameraInformation));
         Fwog::Cmd::BindStorageBuffer("SGpuSpriteBuffer", g_gpuSpriteBuffer.value(), 0, Fwog::WHOLE_BUFFER);
