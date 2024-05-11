@@ -7,6 +7,8 @@ struct SWorld {
     entt::registry EntityRegistry = {};
     entt::entity PlayerEntity;
     cpSpace* PhysicsWorld = nullptr;
+    cpCollisionHandler* CollisionHandlerPlayerVsEnemy = nullptr;
+    cpCollisionHandler* CollisionHandlerEnemyVsEnemy = nullptr;
 };
 
 extern SWorld g_world;
