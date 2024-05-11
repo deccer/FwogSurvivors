@@ -166,15 +166,7 @@ auto CreateBuffers() -> void {
         .addressModeV = Fwog::AddressMode::REPEAT,
     });    
 
-    std::array<SGpuSprite, 3> sprites = {{
-        { glm::vec4(-200, 100, -10, 0), glm::vec4(1, 0, 0, 1) },
-        { glm::vec4(100, 150, -10, 0), glm::vec4(1, 1, 0, 1) },
-        { glm::vec4(200, -100, -9, 0), glm::vec4(0, 0, 1, 1) },
-    }};
-
-    g_gpuSpriteBuffer = Fwog::TypedBuffer<SGpuSprite>(1024, Fwog::BufferStorageFlag::DYNAMIC_STORAGE, "GpuSprites");
-
-    std::vector<uint64_t> spriteTextureHandles;
+    g_gpuSpriteBuffer = Fwog::TypedBuffer<SGpuSprite>(8192, Fwog::BufferStorageFlag::DYNAMIC_STORAGE, "GpuSprites");
 
     g_frogTexture = LoadTextureFromFile("data/sprites/frog.png");
 
@@ -183,7 +175,7 @@ auto CreateBuffers() -> void {
         g_frogTextureHandle = g_frogTexture.value().GetBindlessHandle(g_defaultSampler.value());
     }
 
-    g_gpuSpriteTextureHandleBuffer = Fwog::Buffer(1024, Fwog::BufferStorageFlag::DYNAMIC_STORAGE, "SGpuSpriteTextureHandles");
+    g_gpuSpriteTextureHandleBuffer = Fwog::Buffer(8192, Fwog::BufferStorageFlag::DYNAMIC_STORAGE, "SGpuSpriteTextureHandles");
 }
 
 auto InitializeRenderer(bool isDebug) -> bool {

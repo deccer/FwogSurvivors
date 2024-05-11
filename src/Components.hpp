@@ -1,6 +1,6 @@
 #pragma once
 
-#include <chipmunk/chipmunk.h>
+#include <box2d/box2d.h>
 #include <glm/vec4.hpp>
 
 struct SPlayerComponent {
@@ -12,13 +12,13 @@ struct SEnemyComponent {
 };
 
 struct SPhysicsComponent {
-    cpBody* Body;
-    cpVect PreviousPosition;
-    cpVect CurrentPosition;
+    b2Body* Body;
+    b2Vec2 PreviousPosition;
+    b2Vec2 CurrentPosition;
 };
 
 struct SPositionComponent {
-    cpVect Position;
+    b2Vec2 Position;
 };
 
 struct SColorComponent {

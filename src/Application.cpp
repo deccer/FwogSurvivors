@@ -5,9 +5,13 @@
 
 #include <GLFW/glfw3.h>
 #include <spdlog/spdlog.h>
-#include <chipmunk/chipmunk.h>
+#include "b2_user_settings.h"
+#include <box2d/box2d.h>
 
 SApplication g_application = {};
+
+int32_t g_velocityIterations = 6;
+int32_t g_positionIterations = 2;
 
 auto static OnCursorPositionCallback(
     [[maybe_unused]] GLFWwindow* window,
@@ -141,11 +145,11 @@ auto HandleResize() -> void {
     }
 }
 
-auto HandleInput(cpBody* playerBody) -> void {
+auto HandleInput(b2Body* playerBody) -> void {
 
-    const float playerSpeed = 10.0f;
+    const float playerSpeed = 5.0f;
 
-    cpVect velocity = cpvzero;
+    b2Vec2 velocity = b2Vec2_zero;
 
     auto keyW = glfwGetKey(g_application.Window, GLFW_KEY_W);
     auto keyS = glfwGetKey(g_application.Window, GLFW_KEY_S);
@@ -166,39 +170,43 @@ auto HandleInput(cpBody* playerBody) -> void {
     }
 
     if (velocity.x != 0 || velocity.y != 0) {
-        auto position = cpBodyGetPosition(playerBody);
-        velocity = cpvmult(cpvnormalize(velocity), playerSpeed);
-        cpBodySetPosition(playerBody, position + velocity);
+        auto position = playerBody->GetPosition();
+        velocity *= playerSpeed;
+        playerBody->SetTransform(position + velocity, 0.0f);
     }
 }
 
-auto UpdateWorld(entt::registry& registry, cpSpace* physicsWorld, float physicsDeltaTime) -> void {
+auto UpdateWorld(entt::registry& registry, b2World& physicsWorld, float physicsDeltaTime) -> void {
 
-    cpSpaceStep(physicsWorld, physicsDeltaTime);
+    physicsWorld.Step(physicsDeltaTime, g_velocityIterations, g_positionIterations);
 
     auto playerView = registry.view<SPhysicsComponent, SPlayerComponent, SPositionComponent>();
     const auto [playerPhysicsComponent, playerComponent, playerPositionComponent] = playerView.get(playerView.front());
-    playerPositionComponent.Position = cpBodyGetPosition(playerPhysicsComponent.Body);
+    playerPositionComponent.Position = playerPhysicsComponent.Body->GetPosition();
 
     auto enemyView = registry.view<SPhysicsComponent, SEnemyComponent, SPositionComponent>();
     enemyView.each([&](auto& enemyPhysicsComponent, auto& enemyComponent, auto& enemyPositionComponent) {
 
-        cpVect playerPosition = cpBodyGetPosition(playerPhysicsComponent.Body);
-        cpVect enemyPosition = cpBodyGetPosition(enemyPhysicsComponent.Body);
-        cpVect playerEnemyDirection = cpvsub(playerPosition, enemyPosition);
-        cpVect playerEnemyNormalizedDirection = cpvnormalize(playerEnemyDirection);
+        b2Vec2 playerPosition = playerPhysicsComponent.Body->GetPosition();
+        b2Vec2 enemyPosition = enemyPhysicsComponent.Body->GetPosition();
+        b2Vec2 playerEnemyDirection = playerPosition - enemyPosition;
+        playerEnemyDirection.Normalize();
 
-        cpVect newEnemyVelocity = cpvmult(playerEnemyNormalizedDirection, enemyComponent.Speed);
-        cpBodySetVelocity(enemyPhysicsComponent.Body, newEnemyVelocity);
+        b2Vec2 newEnemyVelocity = playerEnemyDirection;
+        newEnemyVelocity *= enemyComponent.Speed;
+        enemyPhysicsComponent.Body->SetLinearVelocity(newEnemyVelocity);
 
         enemyPhysicsComponent.PreviousPosition = enemyPhysicsComponent.CurrentPosition;
         enemyPhysicsComponent.CurrentPosition = enemyPosition;
 
+/*
         cpVect interpolatedPosition = cpvlerp(
             enemyPhysicsComponent.PreviousPosition,
             enemyPhysicsComponent.CurrentPosition,
             physicsDeltaTime);
         enemyPositionComponent.Position = interpolatedPosition;
+*/
+        enemyPositionComponent.Position = enemyPosition;
     });
 }
 

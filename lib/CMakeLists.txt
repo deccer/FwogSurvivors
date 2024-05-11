@@ -1,21 +1,20 @@
 include(FetchContent)
 
-#- chipmunk -----------------------------------------------------------------------------------------------------------
+#- box2d --------------------------------------------------------------------------------------------------------------
 
-option(BUILD_DEMOS "Build the demo applications" OFF)
-option(INSTALL_DEMOS "Install the demo applications" OFF)
-option(BUILD_SHARED "Build and install the shared library" OFF)
-option(BUILD_STATIC "Build as static library" ON)
-option(INSTALL_STATIC "Install the static library" OFF)
+option(BOX2D_BUILD_UNIT_TESTS "Build the Box2D unit tests" OFF)
+option(BOX2D_BUILD_TESTBED "Build the Box2D testbed" OFF)
+option(BOX2D_BUILD_DOCS "Build the Box2D documentation" OFF)
+option(BOX2D_USER_SETTINGS "Override Box2D settings with b2UserSettings.h" OFF)
 FetchContent_Declare(
-    chipmunk
-    GIT_REPOSITORY https://github.com/slembcke/Chipmunk2D.git
-    GIT_TAG        master
+    box2d
+    GIT_REPOSITORY https://github.com/erincatto/box2d.git
+    GIT_TAG        main
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE    
 )
-message("Fetching chipmunk")
-FetchContent_MakeAvailable(chipmunk)
+message("Fetching box2d")
+FetchContent_MakeAvailable(box2d)
 
 #- fwog ---------------------------------------------------------------------------------------------------------------
 

@@ -1,14 +1,13 @@
 #pragma once
 
 #include <entt/entt.hpp>
-#include <chipmunk/chipmunk.h>
+#include "b2_user_settings.h"
+#include <box2d/box2d.h>
 
 struct SWorld {
     entt::registry EntityRegistry = {};
     entt::entity PlayerEntity;
-    cpSpace* PhysicsWorld = nullptr;
-    cpCollisionHandler* CollisionHandlerPlayerVsEnemy = nullptr;
-    cpCollisionHandler* CollisionHandlerEnemyVsEnemy = nullptr;
+    b2World PhysicsWorld = b2World({0.0f, 0.0f});
 };
 
 extern SWorld g_world;

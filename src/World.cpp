@@ -11,6 +11,32 @@
 
 SWorld g_world = {};
 
+class Foo : public b2ContactListener {
+public:
+    auto BeginContact(b2Contact* contact) -> void {
+        auto userData1 = contact->GetFixtureA()->GetBody()->GetUserData();
+        auto userData2 = contact->GetFixtureB()->GetBody()->GetUserData();
+
+
+        //auto entityId = static_cast<uint32_t>(g_world.PlayerEntity);
+        //bodyDefinition.userData.pointer = reinterpret_cast<uintptr_t>(&entityId);
+
+        if (userData1.pointer != 0 && userData2.pointer != 0) {
+            auto entity1 = reinterpret_cast<entt::entity>(static_cast<uint32_t>(userData1.pointer));
+            auto entity2 = reinterpret_cast<entt::entity>(static_cast<uint32_t>(userData2.pointer));
+        }
+    }
+
+    auto EndContact(b2Contact* contact) -> void {
+
+    }
+};
+
+Foo g_foo;
+
+b2ContactFilter g_playerVsEnemyContactFilter = {};
+b2ContactFilter g_enemyVsEnemyContactFilter = {};
+
 enum EMobileType : uint32_t {
     Player = 1,
     Enemy = 2,
@@ -20,35 +46,41 @@ enum EMobileType : uint32_t {
 
 struct SMobile {
 
-    cpBody* Body = nullptr;
-    cpShape* Shape = nullptr;
-    cpShapeFilter ShapeFilter = {};
+    b2Body* Body;
+    b2PolygonShape* Shape;
+    b2Filter ShapeFilter = {};
 };
 
 std::vector<SMobile> g_mobiles = {};
 
 auto AddMobile(
-    cpVect position,
+    b2Vec2 position,
     EMobileType mobileType,
     uint32_t mobileTypeCollideAgainst,
     float mass,
     float size) -> void {
 
-    auto body = cpBodyNew(mass, cpMomentForBox(mass, size, size));
-    auto shape = cpBoxShapeNew(body, size, size, 0.0f);
-    auto shapeFilter = cpShapeFilterNew(CP_NO_GROUP, mobileType, mobileTypeCollideAgainst);
+    b2BodyDef bodyDefinition = {};
+    bodyDefinition.position = position;
+    bodyDefinition.type = b2BodyType::b2_dynamicBody;
 
-    cpBodySetPosition(body, position);
-    cpShapeSetCollisionType(shape, mobileType);
-    cpShapeSetFilter(shape, shapeFilter);
+    b2PolygonShape shape;
+    shape.SetAsBox(size * 0.5f, size * 0.5f);
 
-    body = cpSpaceAddBody(g_world.PhysicsWorld, body);
-    cpSpaceAddShape(g_world.PhysicsWorld, shape);
+    b2FixtureDef fixtureDefinition;
+    fixtureDefinition.shape = &shape;
+    fixtureDefinition.density = mass;
+    fixtureDefinition.friction = 0.0f;
+    fixtureDefinition.restitution = 0.0f;
+    fixtureDefinition.filter.groupIndex = 0;    
+    fixtureDefinition.filter.categoryBits = mobileType;
+    fixtureDefinition.filter.maskBits = mobileTypeCollideAgainst;
+
+    auto body = g_world.PhysicsWorld.CreateBody(&bodyDefinition);
+    body->CreateFixture(&fixtureDefinition);
 
     auto mobile = SMobile{
         .Body = body,
-        .Shape = shape,
-        .ShapeFilter = shapeFilter,
     };
 
     g_mobiles.push_back(mobile);
@@ -61,8 +93,8 @@ auto AddMobile(
         g_world.EntityRegistry.emplace<SPositionComponent>(g_world.PlayerEntity, position);
         g_world.EntityRegistry.emplace<SColorComponent>(g_world.PlayerEntity, glm::vec4{0.0f, 1.0f, 0.0f, 1.0f});
 
-        auto playerId = static_cast<uint32_t>(g_world.PlayerEntity);
-        cpBodySetUserData(body, &playerId);
+        auto entityId = static_cast<uint32_t>(g_world.PlayerEntity);
+        bodyDefinition.userData.pointer = reinterpret_cast<uintptr_t>(&entityId);
 
     } else if (mobileType == EMobileType::Enemy) {
 
@@ -73,105 +105,39 @@ auto AddMobile(
         g_world.EntityRegistry.emplace<SPositionComponent>(enemy, position);
         g_world.EntityRegistry.emplace<SColorComponent>(enemy, glm::vec4{1.0f, 0.0f, 0.0f, 1.0f});
 
-        cpBodySetUserData(body, &enemyId);
+        auto entityId = static_cast<uint32_t>(enemy);
+        bodyDefinition.userData.pointer = reinterpret_cast<uintptr_t>(&entityId);        
     }
 }
 
 auto InitializeLevel() -> void {
 
-    constexpr float mass = 1.0f;
-
-    AddMobile({0, 0}, EMobileType::Player, EMobileType::Enemy | EMobileType::Wall, 1.0f, 32.0f);
+    AddMobile({0, 0}, EMobileType::Player, EMobileType::Enemy | EMobileType::Wall, 10000.0f, 32.0f);
 
     std::random_device seeder;
     std::mt19937 engine(seeder());
     std::uniform_real_distribution<float> dist(0, 800);
 
-    const auto enemyIndices = std::ranges::iota_view{0, 30};
+    const auto enemyIndices = std::ranges::iota_view{0, 400};
     for(auto enemyIndex : enemyIndices) {
 
-        auto enemyPosition = cpv(-400.0f + dist(engine), -400.0f + dist(engine));
-        AddMobile(enemyPosition, EMobileType::Enemy, EMobileType::Enemy | EMobileType::Player | EMobileType::Wall, 1.0f, 32.0f);
-    }
-}
-
-auto OnHandlePlayerVsEnemyCollisionBegin(
-    cpArbiter* arbiter,
-    cpSpace* space,
-    cpDataPointer userData) -> cpBool {
-
-    if (userData != nullptr) {
-        auto entity = *reinterpret_cast<uint32_t*>(userData);
-
-        spdlog::info("{} PvsE Begin", entity);
-    }
-
-    return cpTrue;
-}
-
-auto OnHandlePlayerVsEnemyCollisionEnd(
-    cpArbiter* arbiter,
-    cpSpace* space,
-    cpDataPointer userData) -> void {
-
-    if (userData != nullptr) {
-        auto entity = *reinterpret_cast<uint32_t*>(userData);
-
-        spdlog::info("{} PvsE End", entity);
-    }
-}
-
-auto OnHandleEnemyVsEnemyCollisionBegin(
-    cpArbiter* arbiter,
-    cpSpace* space,
-    cpDataPointer userData) -> cpBool {
-
-    if (userData != nullptr) {
-        auto entity = *reinterpret_cast<uint32_t*>(userData);
-
-        spdlog::info("{} EvsE Begin", entity);
-    }
-
-    return cpTrue;
-}
-
-auto OnHandleEnemyVsEnemyCollisionEnd(
-    cpArbiter* arbiter,
-    cpSpace* space,
-    cpDataPointer userData) -> void {
-    
-    if (userData != nullptr) {
-        auto entity = *reinterpret_cast<uint32_t*>(userData);
-
-        spdlog::info("{} EvsE End", entity);
+        auto enemyPosition = b2Vec2(-800.0f + dist(engine), -800.0f + dist(engine));
+        AddMobile(enemyPosition, EMobileType::Enemy, EMobileType::Enemy | EMobileType::Player | EMobileType::Wall, 10.0f, 32.0f);
     }
 }
 
 auto InitializeWorld() -> void {
 
-    g_world.PhysicsWorld = cpSpaceNew();
-    cpSpaceSetDamping(g_world.PhysicsWorld, 0.2f);
-    cpSpaceSetCollisionSlop(g_world.PhysicsWorld, 0.2f);
-
-    g_world.CollisionHandlerPlayerVsEnemy = cpSpaceAddCollisionHandler(g_world.PhysicsWorld, EMobileType::Player, EMobileType::Enemy);
-    g_world.CollisionHandlerPlayerVsEnemy->beginFunc = &OnHandlePlayerVsEnemyCollisionBegin;
-    g_world.CollisionHandlerPlayerVsEnemy->postSolveFunc = &OnHandlePlayerVsEnemyCollisionEnd;
-
-    g_world.CollisionHandlerEnemyVsEnemy = cpSpaceAddCollisionHandler(g_world.PhysicsWorld, EMobileType::Enemy, EMobileType::Enemy);
-    g_world.CollisionHandlerEnemyVsEnemy->beginFunc = &OnHandleEnemyVsEnemyCollisionBegin;
-    g_world.CollisionHandlerEnemyVsEnemy->postSolveFunc = &OnHandleEnemyVsEnemyCollisionEnd;
-
+    g_world.PhysicsWorld.SetContactListener(&g_foo);
+    
     InitializeLevel();
 }
 
 auto ShutdownWorld() -> void {
 
     for (auto& mobile : g_mobiles) {
-        cpBodyDestroy(mobile.Body);
-        cpShapeDestroy(mobile.Shape);
+        g_world.PhysicsWorld.DestroyBody(mobile.Body);
     }
 
     g_world.EntityRegistry.clear();
-    cpSpaceFree(g_world.PhysicsWorld);
-    g_world.PhysicsWorld = nullptr;
 }
